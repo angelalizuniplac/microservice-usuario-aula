@@ -1,0 +1,6 @@
+AMQP_URI: amqp://user:password@localhost:5672/
+
+DB_URIS:
+  'service_usuario:Base': 'mysql+pymysql://root:password@localhost:3306/abcBolinhas?charset=utf8'
+
+rpc_exchange: 'nameko-rpc'
