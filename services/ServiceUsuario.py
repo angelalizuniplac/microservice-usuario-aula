@@ -1,20 +1,22 @@
+import db.db as database
+from nameko.rpc import rpc, RpcProxy
 from nameko_sqlalchemy import DatabaseSession
-import db.db as db
-from nameko.rpc import rpc
 from db.ModelUsuario import Usuario
-
 class ServiceUsuario:
     #Não é uma variavel. É um atributo de classe 
     # Quando o Nameko sobe o serviço, ele lê esse atributo e registra o serviço com esse nome na fila
     name = "service_usuario"
 
-    db = DatabaseSession(db.Base)
+    db = DatabaseSession(database.Base)
+    service_funcoes = RpcProxy("service_funcoes")
 
     @rpc
     def AddUser(self, event):
         try:
-            user = Usuario(nome=event['nome'], email=event['email'])
+            if not self.service_funcoes.ValidaEmail(event['email']):
+                raise Exception('email inválido')
 
+            user = Usuario(nome=event['nome'], email=event['email'])
             self.db.add(user)
             self.db.commit()
 
@@ -32,7 +34,6 @@ class ServiceUsuario:
 
             return {'id': user.id, 'nome': user.nome, 'email': user.email, 'msg': 'get ok'}
         except Exception as e:
-            self.db.rollback()
             return {'erro': str(e)}
         finally:
             self.db.close()
@@ -41,6 +42,9 @@ class ServiceUsuario:
     def UpdateUser(self, event):
         try:
             user = self.db.query(Usuario).filter(Usuario.id == event['id']).one()
+
+            if not self.service_funcoes.ValidaEmail(event['email']):
+                raise Exception('email inválido')
 
             user.nome = event['nome']
             user.email = event['email']
@@ -65,7 +69,6 @@ class ServiceUsuario:
 
             return {'id': user.id, 'nome': user.nome, 'email': user.email, 'msg': 'delete ok'}
         except Exception as e:
-            self.db.rollback()
             return {'erro': str(e)}
         finally:
             self.db.close()
